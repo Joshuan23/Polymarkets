@@ -2,12 +2,22 @@
 $100K Outbound Sales Engine
 Usage:
   python main.py dashboard           — show live revenue tracker
-  python main.py scrape <niche>      — pull leads from Apollo (default: real_estate)
+  python main.py scrape <niche>      — pull leads from Apollo (requires paid plan)
+  python main.py import <file.csv>   — import leads from a CSV file (free path)
   python main.py send <niche>        — generate + send emails to queued leads
   python main.py preview <niche>     — preview email copy before sending
   python main.py mark <id> <field>   — update a lead (e.g. mark abc123 deal_closed)
   python main.py leads               — list recent leads
   python main.py niches              — list available niches
+
+CSV format for import:
+  first_name,last_name,email,title,company,linkedin_url
+  (linkedin_url column is optional)
+
+Free lead sources:
+  - LinkedIn (export connections): linkedin.com/mynetwork/invite-connect/connections/
+  - Hunter.io free tier: 25 searches/month
+  - Google Maps manually for local businesses (hvac_plumbing niche)
 """
 import sys
 import json
@@ -17,9 +27,8 @@ sys.path.insert(0, "src")
 from leads.icp import PROFILES, DEFAULT_NICHE
 from leads.apollo_client import search_leads, save_leads_to_db
 from outreach.email_generator import generate_email, personalize_subject
-from outreach.mailchimp_client import (
-    add_or_update_subscriber, create_campaign, send_campaign, plain_text_to_html
-)
+from outreach.mailchimp_client import plain_text_to_html
+from outreach.smtp_client import send_email
 from dashboard.tracker import get_stats, mark_lead, list_leads, print_dashboard
 from config import YOUR_NAME, YOUR_EMAIL
 
@@ -77,6 +86,76 @@ def cmd_preview(niche: str):
         print("-" * 50 + "\n")
 
 
+def cmd_import(csv_file: str):
+    """Import leads from a CSV file into the local database."""
+    import csv
+    import uuid
+
+    expected = ["first_name", "last_name", "email", "title", "company"]
+    try:
+        with open(csv_file, newline="", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            headers = [h.strip().lower() for h in (reader.fieldnames or [])]
+            missing = [col for col in expected if col not in headers]
+            if missing:
+                print(f"CSV is missing required columns: {missing}")
+                print(f"Required: {expected}")
+                return
+
+            import sqlite3
+            from config import DB_PATH
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS leads (
+                    id TEXT PRIMARY KEY,
+                    first_name TEXT, last_name TEXT, email TEXT,
+                    title TEXT, company TEXT, linkedin_url TEXT,
+                    status TEXT DEFAULT 'new',
+                    email_sent INTEGER DEFAULT 0,
+                    reply_received INTEGER DEFAULT 0,
+                    call_booked INTEGER DEFAULT 0,
+                    deal_closed INTEGER DEFAULT 0,
+                    deal_value REAL DEFAULT 0,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            inserted = skipped = 0
+            for row in reader:
+                row = {k.strip().lower(): v.strip() for k, v in row.items()}
+                lead_id = str(uuid.uuid4())
+                try:
+                    c.execute("""
+                        INSERT OR IGNORE INTO leads
+                          (id, first_name, last_name, email, title, company, linkedin_url)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        lead_id,
+                        row.get("first_name", ""),
+                        row.get("last_name", ""),
+                        row.get("email", ""),
+                        row.get("title", ""),
+                        row.get("company", ""),
+                        row.get("linkedin_url", ""),
+                    ))
+                    if c.rowcount:
+                        inserted += 1
+                    else:
+                        skipped += 1
+                except Exception:
+                    skipped += 1
+
+            conn.commit()
+            conn.close()
+            print(f"\nImported {inserted} leads ({skipped} skipped as duplicates).")
+            print_dashboard()
+
+    except FileNotFoundError:
+        print(f"File not found: {csv_file}")
+
+
 def cmd_send(niche: str):
     profile = PROFILES.get(niche)
     if not profile:
@@ -87,7 +166,7 @@ def cmd_send(niche: str):
     unsent = [l for l in leads if not l["email_sent"] and l.get("email")]
 
     if not unsent:
-        print("No unsent leads with emails. Run `python main.py scrape` first.")
+        print("No unsent leads with emails. Run `python main.py import <file.csv>` or `python main.py scrape` first.")
         return
 
     print(f"\nPreparing to send to {len(unsent)} leads in niche: {niche}\n")
@@ -100,24 +179,17 @@ def cmd_send(niche: str):
     errors = 0
     for lead in unsent:
         try:
-            # 1. Generate personalized email
             email_data = generate_email(lead, profile, "initial")
             subject = personalize_subject(email_data["subject"], lead["first_name"])
             body_html = plain_text_to_html(email_data["body"])
 
-            # 2. Add to Mailchimp
-            add_or_update_subscriber(lead, tags=[niche, "outbound-sequence"])
-
-            # 3. Create and send campaign
-            campaign_id = create_campaign(
+            send_email(
+                to_email=lead["email"],
                 subject=subject,
                 body_html=body_html,
-                from_name=YOUR_NAME,
-                reply_to=YOUR_EMAIL,
+                body_text=email_data["body"],
             )
-            send_campaign(campaign_id)
 
-            # 4. Mark as sent in DB
             mark_lead(lead["id"], "email_sent", 1)
             sent += 1
             print(f"  Sent to {lead['first_name']} {lead['last_name']} @ {lead['company']}")
@@ -164,6 +236,7 @@ def cmd_niches():
 COMMANDS = {
     "dashboard": (cmd_dashboard, []),
     "scrape": (cmd_scrape, ["niche"]),
+    "import": (cmd_import, ["csv_file"]),
     "preview": (cmd_preview, ["niche"]),
     "send": (cmd_send, ["niche"]),
     "mark": (cmd_mark, ["lead_id", "field", "value?"]),
