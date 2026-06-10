@@ -34,9 +34,16 @@ PROFILES = {
         "description": "Home services businesses (HVAC, plumbing, electrical) with scheduling chaos",
         "titles": ["owner", "general manager", "operations manager", "ceo"],
         "company_sizes": ["1,10", "11,50"],
-        "pain_point": "missed calls, manual scheduling, and no-shows costing you jobs every week",
-        "result": "businesses capture 95% of inbound leads automatically and cut no-shows by 80%",
+        "pain_point": "missed calls going to voicemail and losing those jobs to competitors who pick up",
+        "result": "every missed call gets an instant text-back that books the job automatically — most owners recover 3-5 jobs in the first week",
+    },
+    "local_service": {
+        "description": "Plumbers, dentists, gyms, salons, and any local business losing leads to missed calls",
+        "titles": ["owner", "manager", "operator", "founder"],
+        "company_sizes": ["1,10", "11,50"],
+        "pain_point": "losing customers every time the phone goes to voicemail — they just call the next business on Google",
+        "result": "an automatic text goes out within 60 seconds of every missed call, books the appointment, and follows up asking for a Google review after the job — most clients see ROI in the first week",
     },
 }
 
-DEFAULT_NICHE = "real_estate"
+DEFAULT_NICHE = "local_service"
