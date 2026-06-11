@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeverMiss | Missed-Call Text-Back for Local Businesses</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --blue: #0066ff;
+            --blue-light: #3385ff;
+            --dark: #0a0a0a;
+            --dark-2: #111111;
+            --dark-3: #1a1a1a;
+            --dark-4: #222222;
+            --gray: #888888;
+            --light-gray: #cccccc;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark);
+            color: var(--white);
+            overflow-x: hidden;
+        }
+
+        /* NAVBAR */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(10,10,10,0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .logo { font-size: 1.25rem; font-weight: 800; color: var(--white); letter-spacing: -0.5px; }
+        .logo span { color: var(--blue); }
+
+        .nav-cta {
+            background: var(--blue);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .nav-cta:hover { background: var(--blue-light); }
+
+        /* HERO */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 7rem 1.5rem 4rem;
+            background: radial-gradient(ellipse at 50% 0%, rgba(0,102,255,0.15) 0%, transparent 70%);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(0,102,255,0.1);
+            border: 1px solid rgba(0,102,255,0.3);
+            color: #66aaff;
+            padding: 0.4rem 1rem;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            animation: fadeInDown 0.6s ease;
+        }
+        .badge::before {
+            content: '';
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #66aaff;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        .hero h1 {
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            font-weight: 900;
+            line-height: 1.1;
+            letter-spacing: -1px;
+            margin-bottom: 1.5rem;
+            animation: fadeInUp 0.6s ease 0.1s both;
+        }
+        .hero h1 .highlight { color: var(--blue); }
+
+        .hero p {
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            color: var(--light-gray);
+            max-width: 560px;
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
+            animation: fadeInUp 0.6s ease 0.2s both;
+        }
+
+        .hero-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            width: 100%;
+            max-width: 320px;
+            animation: fadeInUp 0.6s ease 0.3s both;
+        }
+
+        .btn-primary {
+            background: var(--blue);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.2s;
+            display: block;
+        }
+        .btn-primary:hover {
+            background: var(--blue-light);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,102,255,0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--light-gray);
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+            display: block;
+        }
+        .btn-secondary:hover { border-color: rgba(255,255,255,0.3); color: white; }
+
+        .stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 4rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            animation: fadeInUp 0.6s ease 0.4s both;
+        }
+        .stat { text-align: center; }
+        .stat-number { font-size: 2rem; font-weight: 900; color: var(--blue); display: block; }
+        .stat-label { font-size: 0.8rem; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* SECTIONS */
+        section { padding: 5rem 1.5rem; }
+        .section-label {
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--blue);
+            margin-bottom: 1rem;
+        }
+        .section-title {
+            text-align: center;
+            font-size: clamp(1.75rem, 5vw, 2.5rem);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 1rem;
+        }
+        .section-sub {
+            text-align: center;
+            color: var(--gray);
+            font-size: 1rem;
+            max-width: 500px;
+            margin: 0 auto 3rem;
+            line-height: 1.7;
+        }
+
+        /* PROBLEM */
+        .problem { background: var(--dark-2); }
+        .problem-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .problem-card {
+            background: var(--dark-3);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+        .problem-icon { font-size: 2rem; flex-shrink: 0; }
+        .problem-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+        .problem-card p { font-size: 0.9rem; color: var(--gray); line-height: 1.6; }
+
+        /* HOW IT WORKS */
+        .steps {
+            max-width: 700px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .step {
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+            position: relative;
+        }
+        .step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 1.25rem;
+            top: 3rem;
+            bottom: -1rem;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--blue), transparent);
+        }
+        .step-num {
+            width: 2.5rem; height: 2.5rem;
+            border-radius: 50%;
+            background: var(--blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+        }
+        .step-content { padding-bottom: 2.5rem; }
+        .step-content h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .step-content p { font-size: 0.9rem; color: var(--gray); line-height: 1.6; }
+
+        /* DEMO BOX */
+        .demo-box {
+            max-width: 320px;
+            margin: 3rem auto 0;
+            background: var(--dark-3);
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .demo-label {
+            font-size: 0.75rem;
+            color: var(--gray);
+            text-align: center;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .message { display: flex; flex-direction: column; gap: 0.4rem; }
+        .msg {
+            max-width: 82%;
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+        .msg.incoming {
+            background: var(--dark-4);
+            color: var(--light-gray);
+            border-bottom-left-radius: 4px;
+            align-self: flex-start;
+        }
+        .msg.outgoing {
+            background: var(--blue);
+            color: white;
+            border-bottom-right-radius: 4px;
+            align-self: flex-end;
+        }
+        .msg-time { font-size: 0.65rem; color: var(--gray); padding: 0 0.25rem; }
+        .msg-time.right { text-align: right; align-self: flex-end; }
+
+        /* FEATURES */
+        .features { background: var(--dark-2); }
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .feature-card {
+            background: var(--dark-3);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .feature-card:hover { border-color: rgba(0,102,255,0.3); transform: translateY(-2px); }
+        .feature-icon { font-size: 1.75rem; margin-bottom: 0.75rem; display: block; }
+        .feature-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+        .feature-card p { font-size: 0.8rem; color: var(--gray); line-height: 1.5; }
+
+        /* PRICING */
+        .pricing-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .pricing-card {
+            background: var(--dark-3);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+        }
+        .pricing-card.featured {
+            border-color: var(--blue);
+            background: linear-gradient(135deg, rgba(0,102,255,0.1), var(--dark-3));
+        }
+        .pricing-tag {
+            display: inline-block;
+            background: var(--blue);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.75rem;
+            border-radius: 100px;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .pricing-name { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .pricing-price { font-size: 3rem; font-weight: 900; letter-spacing: -2px; margin-bottom: 0.25rem; }
+        .pricing-price span { font-size: 1.25rem; font-weight: 500; color: var(--gray); }
+        .pricing-desc { color: var(--gray); font-size: 0.875rem; margin-bottom: 1.5rem; }
+        .pricing-features { list-style: none; text-align: left; margin-bottom: 2rem; }
+        .pricing-features li {
+            font-size: 0.875rem;
+            padding: 0.4rem 0;
+            color: var(--light-gray);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .pricing-features li::before { content: '✓'; color: var(--blue); font-weight: 700; flex-shrink: 0; }
+
+        /* FAQ */
+        .faq-list {
+            max-width: 680px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .faq-item {
+            background: var(--dark-3);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .faq-question {
+            padding: 1.25rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            user-select: none;
+        }
+        .faq-icon { font-size: 1.25rem; color: var(--blue); flex-shrink: 0; transition: transform 0.3s; }
+        .faq-item.open .faq-icon { transform: rotate(45deg); }
+        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+        .faq-item.open .faq-answer { max-height: 200px; }
+        .faq-answer-inner {
+            padding: 0 1.5rem 1.25rem;
+            font-size: 0.875rem;
+            color: var(--gray);
+            line-height: 1.7;
+        }
+
+        /* FINAL CTA */
+        .final-cta {
+            background: linear-gradient(135deg, rgba(0,102,255,0.15), var(--dark-2));
+            text-align: center;
+            border-top: 1px solid rgba(0,102,255,0.2);
+        }
+        .final-cta h2 {
+            font-size: clamp(1.75rem, 5vw, 2.5rem);
+            font-weight: 900;
+            margin-bottom: 1rem;
+            letter-spacing: -0.5px;
+        }
+        .final-cta p { color: var(--gray); margin-bottom: 2rem; font-size: 1rem; }
+
+        /* FOOTER */
+        footer {
+            background: var(--dark);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding: 2rem 1.5rem;
+            text-align: center;
+        }
+        footer p { color: var(--gray); font-size: 0.8rem; }
+
+        /* FLOATING CTA */
+        .floating-cta {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            background: var(--blue);
+            color: white;
+            padding: 0.875rem 2rem;
+            border-radius: 100px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            box-shadow: 0 8px 30px rgba(0,102,255,0.5);
+            white-space: nowrap;
+            transition: all 0.2s;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .floating-cta.visible {
+            opacity: 1;
+            pointer-events: auto;
+            animation: slideUp 0.3s ease forwards;
+        }
+        .floating-cta:hover {
+            transform: translateX(-50%) translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0,102,255,0.6);
+        }
+
+        /* ANIMATIONS */
+        @keyframes fadeInDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes slideUp { from{opacity:0;transform:translateX(-50%) translateY(20px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav>
+        <div class="logo">Never<span>Miss</span></div>
+        <a href="https://calendly.com/jasautomationai/30min" class="nav-cta" target="_blank">Book a Free Call</a>
+    </nav>
+
+    <!-- FLOATING CTA -->
+    <a href="https://calendly.com/jasautomationai/30min" class="floating-cta" id="floatingCta" target="_blank">
+        📞 Book Your Free Call
+    </a>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="badge">Automated for Local Businesses</div>
+        <h1>Never Lose a Customer<br>to <span class="highlight">Voicemail</span> Again</h1>
+        <p>We set up an automatic text-back system that responds to every missed call in 60 seconds — books the job, follows up, and gets you Google reviews. All on autopilot.</p>
+        <div class="hero-btns">
+            <a href="https://calendly.com/jasautomationai/30min" class="btn-primary" target="_blank">Book a Free 15-Min Call</a>
+            <a href="#how-it-works" class="btn-secondary">See How It Works</a>
+        </div>
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-number">60s</span>
+                <span class="stat-label">Response Time</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number">3–5</span>
+                <span class="stat-label">Jobs Recovered/Week</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number">48h</span>
+                <span class="stat-label">Setup Time</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROBLEM -->
+    <section class="problem">
+        <p class="section-label reveal">The Problem</p>
+        <h2 class="section-title reveal">Every Missed Call Is Money Walking Out the Door</h2>
+        <p class="section-sub reveal">Most local businesses lose 5–10 jobs a week — not because they're bad at their work, but because nobody picked up the phone.</p>
+        <div class="problem-grid">
+            <div class="problem-card reveal">
+                <span class="problem-icon">📵</span>
+                <div>
+                    <h3>They call your competitor</h3>
+                    <p>When you don't answer, customers don't leave a voicemail. They scroll to the next result and call them instead.</p>
+                </div>
+            </div>
+            <div class="problem-card reveal">
+                <span class="problem-icon">💸</span>
+                <div>
+                    <h3>Each missed call = $500–2,000 lost</h3>
+                    <p>A single plumbing job, HVAC repair, or dental appointment is worth hundreds. Multiply that by missed calls per week.</p>
+                </div>
+            </div>
+            <div class="problem-card reveal">
+                <span class="problem-icon">😤</span>
+                <div>
+                    <h3>You can't answer every call</h3>
+                    <p>You're on the job, with a customer, or just unavailable. That's not a flaw — it's just business. We fix it automatically.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="how-it-works">
+        <p class="section-label reveal">How It Works</p>
+        <h2 class="section-title reveal">Set Up Once. Works Forever.</h2>
+        <p class="section-sub reveal">Here's exactly what happens the moment a customer calls.</p>
+        <div class="steps">
+            <div class="step reveal">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h3>Customer calls, nobody answers</h3>
+                    <p>Your phone rings and goes to voicemail like it always has. Nothing changes on your end.</p>
+                </div>
+            </div>
+            <div class="step reveal">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h3>They get an automatic text in 60 seconds</h3>
+                    <p>"Hi! Sorry we missed your call. We'd love to help — what do you need?" — sent automatically, every time.</p>
+                </div>
+            </div>
+            <div class="step reveal">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h3>They reply, job gets booked</h3>
+                    <p>The conversation starts. The system collects their info and books the appointment — while you're still on the job.</p>
+                </div>
+            </div>
+            <div class="step reveal">
+                <div class="step-num">4</div>
+                <div class="step-content">
+                    <h3>After the job, they get a review request</h3>
+                    <p>Automatically asks for a Google review after each completed job. More reviews, higher ranking, more calls.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIVE DEMO -->
+        <div class="demo-box reveal">
+            <p class="demo-label">Live Example</p>
+            <div class="message">
+                <div class="msg incoming">📞 Missed call from (555) 482-1923</div>
+                <span class="msg-time">12:04 PM</span>
+                <div class="msg outgoing">Hi! Sorry we missed your call 👋 We'd love to help — what do you need?</div>
+                <span class="msg-time right">Delivered · 12:05 PM</span>
+                <div class="msg incoming">My AC stopped working, need someone ASAP</div>
+                <span class="msg-time">12:07 PM</span>
+                <div class="msg outgoing">We can have someone out today! What's your address? 🔧</div>
+                <span class="msg-time right">Delivered · 12:07 PM</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="features">
+        <p class="section-label reveal">What's Included</p>
+        <h2 class="section-title reveal">Everything You Need. Nothing You Don't.</h2>
+        <div class="features-grid">
+            <div class="feature-card reveal">
+                <span class="feature-icon">⚡</span>
+                <h3>60-Second Text-Back</h3>
+                <p>Every missed call triggers an instant text. No delays, no exceptions.</p>
+            </div>
+            <div class="feature-card reveal">
+                <span class="feature-icon">📅</span>
+                <h3>Auto Booking</h3>
+                <p>Customers book appointments directly through text. No back and forth.</p>
+            </div>
+            <div class="feature-card reveal">
+                <span class="feature-icon">⭐</span>
+                <h3>Review Automation</h3>
+                <p>Get more Google reviews automatically after every completed job.</p>
+            </div>
+            <div class="feature-card reveal">
+                <span class="feature-icon">🔄</span>
+                <h3>Follow-Up Sequences</h3>
+                <p>Automatically follows up with leads who don't respond the first time.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- PRICING -->
+    <section>
+        <p class="section-label reveal">Pricing</p>
+        <h2 class="section-title reveal">Simple, Transparent Pricing</h2>
+        <p class="section-sub reveal">Most owners recover the setup cost in the first week from jobs they were already losing.</p>
+        <div class="pricing-cards">
+            <div class="pricing-card reveal">
+                <div class="pricing-name">One-Time Setup</div>
+                <div class="pricing-price">$1,500<span> once</span></div>
+                <div class="pricing-desc">We handle everything start to finish.</div>
+                <ul class="pricing-features">
+                    <li>Full system setup</li>
+                    <li>Custom message templates</li>
+                    <li>Testing & go-live</li>
+                    <li>Live within 48 hours</li>
+                </ul>
+            </div>
+            <div class="pricing-card featured reveal">
+                <div class="pricing-tag">Monthly Plan</div>
+                <div class="pricing-name">Ongoing Service</div>
+                <div class="pricing-price">$500<span>/mo</span></div>
+                <div class="pricing-desc">Cancel anytime. No contracts. No catch.</div>
+                <ul class="pricing-features">
+                    <li>Text-back running 24/7</li>
+                    <li>Review request automation</li>
+                    <li>Follow-up sequences</li>
+                    <li>Support & updates included</li>
+                </ul>
+                <a href="https://calendly.com/jasautomationai/30min" class="btn-primary" target="_blank">Get Started Today</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="problem">
+        <p class="section-label reveal">FAQ</p>
+        <h2 class="section-title reveal">Common Questions</h2>
+        <div class="faq-list">
+            <div class="faq-item reveal">
+                <div class="faq-question">Do I need any tech skills to use this? <span class="faq-icon">+</span></div>
+                <div class="faq-answer"><div class="faq-answer-inner">None at all. We set everything up for you. Once it's live, it runs completely on autopilot. You don't touch anything.</div></div>
+            </div>
+            <div class="faq-item reveal">
+                <div class="faq-question">How fast can you get it set up? <span class="faq-icon">+</span></div>
+                <div class="faq-answer"><div class="faq-answer-inner">Within 48 hours of payment. Most clients are live the same day.</div></div>
+            </div>
+            <div class="faq-item reveal">
+                <div class="faq-question">What if I want to cancel? <span class="faq-icon">+</span></div>
+                <div class="faq-answer"><div class="faq-answer-inner">No contracts. Cancel anytime with a simple message. We keep it that way because we know the system will pay for itself.</div></div>
+            </div>
+            <div class="faq-item reveal">
+                <div class="faq-question">What types of businesses is this for? <span class="faq-icon">+</span></div>
+                <div class="faq-answer"><div class="faq-answer-inner">Any local business that gets phone calls — plumbers, HVAC, electricians, dentists, auto repair, gyms, salons, and more.</div></div>
+            </div>
+            <div class="faq-item reveal">
+                <div class="faq-question">How do I know it's working? <span class="faq-icon">+</span></div>
+                <div class="faq-answer"><div class="faq-answer-inner">You'll see every conversation in your dashboard. Most owners notice recovered jobs within the first few days.</div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section class="final-cta">
+        <h2 class="reveal">Ready to Stop Losing Jobs<br>to Voicemail?</h2>
+        <p class="reveal">Book a free 15-minute call. We'll show you exactly how it works for your business — no pressure, no pitch.</p>
+        <a href="https://calendly.com/jasautomationai/30min" class="btn-primary reveal" style="max-width:280px;margin:0 auto;" target="_blank">Book My Free Call →</a>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <p>© 2026 NeverMiss. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Scroll reveal
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // Floating CTA
+        const floatingCta = document.getElementById('floatingCta');
+        window.addEventListener('scroll', () => {
+            floatingCta.classList.toggle('visible', window.scrollY > 400);
+        });
+
+        // FAQ accordion
+        document.querySelectorAll('.faq-question').forEach(q => {
+            q.addEventListener('click', () => {
+                const item = q.parentElement;
+                const wasOpen = item.classList.contains('open');
+                document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+                if (!wasOpen) item.classList.add('open');
+            });
+        });
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+    </script>
+
+</body>
+</html>
