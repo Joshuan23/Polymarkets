@@ -281,6 +281,116 @@ def cmd_credits():
     print(f"Free plan includes 25/month. Resets on the 1st.\n")
 
 
+def cmd_enrich_csv(csv_file: str):
+    """Take a prospect CSV (company, website) and find emails via Hunter.io."""
+    import csv
+    import uuid
+    import sqlite3
+    import time
+    from urllib.parse import urlparse
+    from config import HUNTER_API_KEY, DB_PATH
+
+    if not HUNTER_API_KEY:
+        print("Add your HUNTER_API_KEY to Replit Secrets first. Sign up free at hunter.io")
+        return
+
+    try:
+        with open(csv_file, newline="", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+    except FileNotFoundError:
+        print(f"File not found: {csv_file}")
+        return
+
+    print(f"\nFound {len(rows)} companies. Looking up emails via Hunter.io...\n")
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS leads (
+            id TEXT PRIMARY KEY,
+            first_name TEXT, last_name TEXT, email TEXT,
+            title TEXT, company TEXT, linkedin_url TEXT,
+            status TEXT DEFAULT 'new',
+            email_sent INTEGER DEFAULT 0,
+            reply_received INTEGER DEFAULT 0,
+            call_booked INTEGER DEFAULT 0,
+            deal_closed INTEGER DEFAULT 0,
+            deal_value REAL DEFAULT 0,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    found = 0
+    skipped = 0
+
+    for row in rows:
+        company = row.get("Company") or row.get("company") or ""
+        website = row.get("Website") or row.get("website") or ""
+
+        if not website or not company:
+            print(f"  SKIP  {company or 'Unknown'} — no website listed")
+            skipped += 1
+            continue
+
+        # Extract domain
+        parsed = urlparse(website if "://" in website else "https://" + website)
+        domain = parsed.netloc.replace("www.", "") or parsed.path.replace("www.", "")
+
+        try:
+            emails = domain_search(domain, limit=5)
+            if not emails:
+                print(f"  NONE  {company} ({domain})")
+                skipped += 1
+                continue
+
+            # Pick the best email — prefer owner/manager titles
+            best = None
+            for e in emails:
+                pos = (e.get("position") or "").lower()
+                if any(t in pos for t in ["owner", "founder", "manager", "president", "director"]):
+                    best = e
+                    break
+            if not best:
+                best = emails[0]
+
+            first = best.get("first_name") or ""
+            last = best.get("last_name") or ""
+            email = best.get("value") or ""
+            position = best.get("position") or "Owner"
+
+            if not email:
+                print(f"  NONE  {company} ({domain})")
+                skipped += 1
+                continue
+
+            c.execute("""
+                INSERT OR IGNORE INTO leads
+                  (id, first_name, last_name, email, title, company)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (str(uuid.uuid4()), first, last, email, position, company))
+
+            if c.rowcount:
+                found += 1
+                print(f"  FOUND {company:<35} {first} {last} — {email}")
+            else:
+                print(f"  DUP   {company} — already in database")
+
+            time.sleep(0.5)  # be gentle with the API
+
+        except Exception as e:
+            print(f"  ERR   {company} ({domain}) — {e}")
+            skipped += 1
+
+    conn.commit()
+    conn.close()
+
+    print(f"\nDone: {found} emails found and saved, {skipped} skipped.")
+    print(f"Run `python main.py leads` to see them, then `python main.py send local_service` to send.\n")
+    print_dashboard()
+
+
 def cmd_niches():
     print("\nAvailable niches:\n")
     for key, profile in PROFILES.items():
@@ -299,6 +409,7 @@ COMMANDS = {
     "niches": (cmd_niches, []),
     "hunter": (cmd_hunter, ["domain", "first_name?", "last_name?"]),
     "credits": (cmd_credits, []),
+    "enrich-csv": (cmd_enrich_csv, ["csv_file"]),
 }
 
 
