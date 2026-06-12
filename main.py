@@ -26,6 +26,7 @@ sys.path.insert(0, "src")
 
 from leads.icp import PROFILES, DEFAULT_NICHE
 from leads.apollo_client import search_leads, save_leads_to_db
+from leads.hunter_client import domain_search, find_email, get_credits
 from outreach.email_generator import generate_email, personalize_subject
 from outreach.mailchimp_client import plain_text_to_html
 from outreach.smtp_client import send_email
@@ -226,6 +227,60 @@ def cmd_leads():
     print()
 
 
+def cmd_hunter(domain: str, first_name: str = None, last_name: str = None):
+    """Find emails for a business domain using Hunter.io."""
+    from config import HUNTER_API_KEY
+    if not HUNTER_API_KEY:
+        print("Add your HUNTER_API_KEY to .env first. Sign up free at hunter.io")
+        return
+
+    domain = domain.replace("https://", "").replace("http://", "").replace("www.", "").strip("/")
+
+    if first_name and last_name:
+        print(f"\nLooking up {first_name} {last_name} at {domain}...\n")
+        result = find_email(domain, first_name, last_name)
+        email = result.get("email")
+        score = result.get("score", 0)
+        if email:
+            print(f"  Found: {email} (confidence: {score}%)")
+            print(f"\n  Add to leads.csv:")
+            print(f"  {first_name},{last_name},{email},Owner,{domain.split('.')[0].title()}")
+        else:
+            print(f"  No email found for {first_name} {last_name} at {domain}")
+    else:
+        print(f"\nSearching for emails at {domain}...\n")
+        emails = domain_search(domain)
+        if not emails:
+            print("  No emails found. Try adding a first and last name.")
+            print(f"  Usage: python main.py hunter {domain} FirstName LastName")
+            return
+
+        print(f"  Found {len(emails)} email(s):\n")
+        for e in emails:
+            name = f"{e.get('first_name', '')} {e.get('last_name', '')}".strip()
+            position = e.get("position", "")
+            email = e.get("value", "")
+            confidence = e.get("confidence", 0)
+            print(f"  {name:<25} {position:<25} {email:<35} ({confidence}% confidence)")
+
+        print(f"\n  Add the best one to leads.csv in this format:")
+        best = emails[0]
+        print(f"  {best.get('first_name','')},{best.get('last_name','')},{best.get('value','')},Owner,Company Name")
+
+
+def cmd_credits():
+    """Check remaining Hunter.io API credits."""
+    from config import HUNTER_API_KEY
+    if not HUNTER_API_KEY:
+        print("Add your HUNTER_API_KEY to .env first.")
+        return
+    data = get_credits()
+    used = data.get("used", 0)
+    available = data.get("available", 0)
+    print(f"\nHunter.io credits: {available} remaining ({used} used this month)")
+    print(f"Free plan includes 25/month. Resets on the 1st.\n")
+
+
 def cmd_niches():
     print("\nAvailable niches:\n")
     for key, profile in PROFILES.items():
@@ -242,6 +297,8 @@ COMMANDS = {
     "mark": (cmd_mark, ["lead_id", "field", "value?"]),
     "leads": (cmd_leads, []),
     "niches": (cmd_niches, []),
+    "hunter": (cmd_hunter, ["domain", "first_name?", "last_name?"]),
+    "credits": (cmd_credits, []),
 }
 
 

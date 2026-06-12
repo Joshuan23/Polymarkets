@@ -5,6 +5,7 @@ load_dotenv()
 
 # API Keys - loaded from .env (copy .env.example → .env and fill in values)
 APOLLO_API_KEY = os.getenv("APOLLO_API_KEY", "")
+HUNTER_API_KEY = os.getenv("HUNTER_API_KEY", "")
 MAILCHIMP_API_KEY = os.getenv("MAILCHIMP_API_KEY", "")
 MAILCHIMP_SERVER = os.getenv("MAILCHIMP_SERVER", "")  # e.g. "us1"
 MAILCHIMP_LIST_ID = os.getenv("MAILCHIMP_LIST_ID", "")
