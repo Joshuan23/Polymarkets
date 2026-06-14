@@ -27,6 +27,7 @@ sys.path.insert(0, "src")
 from leads.icp import PROFILES, DEFAULT_NICHE
 from leads.apollo_client import search_leads, save_leads_to_db
 from leads.hunter_client import domain_search, find_email, get_credits
+from leads.yelp_client import search_businesses, get_business_details
 from outreach.email_generator import generate_email, personalize_subject
 from outreach.mailchimp_client import plain_text_to_html
 from outreach.smtp_client import send_email
@@ -227,6 +228,123 @@ def cmd_leads():
     print()
 
 
+def cmd_find(term: str, location: str, limit: str = "20"):
+    """Auto-find local businesses via Yelp and look up emails via Hunter.io."""
+    import uuid
+    import sqlite3
+    import time
+    from urllib.parse import urlparse
+    from config import YELP_API_KEY, HUNTER_API_KEY, DB_PATH
+
+    if not YELP_API_KEY:
+        print("Add your YELP_API_KEY to Replit Secrets first.")
+        print("Sign up free at yelp.com/developers → Create App → copy API Key")
+        return
+
+    print(f"\nSearching Yelp for '{term}' in {location}...\n")
+
+    try:
+        businesses = search_businesses(term, location, int(limit))
+    except Exception as e:
+        print(f"Yelp search failed: {e}")
+        return
+
+    if not businesses:
+        print("No businesses found. Try a different term or location.")
+        return
+
+    print(f"Found {len(businesses)} businesses. Getting details and emails...\n")
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS leads (
+            id TEXT PRIMARY KEY,
+            first_name TEXT, last_name TEXT, email TEXT,
+            title TEXT, company TEXT, linkedin_url TEXT,
+            status TEXT DEFAULT 'new',
+            email_sent INTEGER DEFAULT 0,
+            reply_received INTEGER DEFAULT 0,
+            call_booked INTEGER DEFAULT 0,
+            deal_closed INTEGER DEFAULT 0,
+            deal_value REAL DEFAULT 0,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    saved = 0
+    no_email = 0
+
+    for biz in businesses:
+        name = biz.get("name", "")
+        phone = biz.get("phone", "")
+        biz_id = biz.get("id", "")
+
+        # Get website from details
+        website = ""
+        try:
+            details = get_business_details(biz_id)
+            website = details.get("url", "") or details.get("website", "")
+            time.sleep(0.3)
+        except Exception:
+            pass
+
+        # Extract domain
+        domain = ""
+        if website:
+            parsed = urlparse(website if "://" in website else "https://" + website)
+            domain = parsed.netloc.replace("www.", "") or parsed.path.replace("www.", "")
+            # Strip Yelp's own domain
+            if "yelp.com" in domain:
+                domain = ""
+
+        # Try Hunter for email
+        email = ""
+        first = ""
+        last = ""
+        if domain and HUNTER_API_KEY:
+            try:
+                emails = domain_search(domain, limit=5)
+                if emails:
+                    best = None
+                    for e in emails:
+                        pos = (e.get("position") or "").lower()
+                        if any(t in pos for t in ["owner", "founder", "manager", "president"]):
+                            best = e
+                            break
+                    if not best:
+                        best = emails[0]
+                    email = best.get("value", "")
+                    first = best.get("first_name", "")
+                    last = best.get("last_name", "")
+                time.sleep(0.5)
+            except Exception:
+                pass
+
+        # Save to DB
+        c.execute("""
+            INSERT OR IGNORE INTO leads
+              (id, first_name, last_name, email, title, company)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (str(uuid.uuid4()), first, last, email or None, "Owner", name))
+
+        if c.rowcount:
+            if email:
+                saved += 1
+                print(f"  FOUND  {name:<35} {email}")
+            else:
+                no_email += 1
+                print(f"  SAVED  {name:<35} (no email found — {phone or 'no phone'})")
+
+    conn.commit()
+    conn.close()
+
+    print(f"\nDone: {saved} with emails, {no_email} saved without email.")
+    print(f"Run `python main.py send local_service` to send to leads with emails.\n")
+    print_dashboard()
+
+
 def cmd_hunter(domain: str, first_name: str = None, last_name: str = None):
     """Find emails for a business domain using Hunter.io."""
     from config import HUNTER_API_KEY
@@ -407,6 +525,7 @@ COMMANDS = {
     "mark": (cmd_mark, ["lead_id", "field", "value?"]),
     "leads": (cmd_leads, []),
     "niches": (cmd_niches, []),
+    "find": (cmd_find, ["term", "location", "limit?"]),
     "hunter": (cmd_hunter, ["domain", "first_name?", "last_name?"]),
     "credits": (cmd_credits, []),
     "enrich-csv": (cmd_enrich_csv, ["csv_file"]),
