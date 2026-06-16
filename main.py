@@ -184,10 +184,31 @@ def cmd_send(niche: str, daily_limit: str = "100"):
         print("Cancelled.")
         return
 
+    import re
+    import socket
+
+    def is_valid_email(email: str) -> bool:
+        """Quick syntax + DNS check to filter obvious bad emails."""
+        if not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
+            return False
+        domain = email.split('@')[1]
+        try:
+            socket.getaddrinfo(domain, None)
+            return True
+        except socket.gaierror:
+            return False
+
     sent = 0
     errors = 0
+    skipped = 0
     for lead in batch:
         try:
+            if not is_valid_email(lead["email"]):
+                skipped += 1
+                print(f"  SKIP  {lead['email']} (invalid domain)")
+                mark_lead(lead["id"], "email_sent", 1)
+                continue
+
             email_data = generate_email(lead, profile, "initial")
             subject = personalize_subject(email_data["subject"], lead["first_name"])
             body_html = plain_text_to_html(email_data["body"])
@@ -207,7 +228,7 @@ def cmd_send(niche: str, daily_limit: str = "100"):
             errors += 1
             print(f"  Error sending to {lead.get('email')}: {e}")
 
-    print(f"\nDone: {sent} sent, {errors} errors.")
+    print(f"\nDone: {sent} sent, {skipped} invalid emails skipped, {errors} errors.")
     print_dashboard()
 
 
