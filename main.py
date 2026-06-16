@@ -27,7 +27,7 @@ sys.path.insert(0, "src")
 from leads.icp import PROFILES, DEFAULT_NICHE
 from leads.apollo_client import search_leads, save_leads_to_db
 from leads.hunter_client import domain_search, find_email, get_credits
-from leads.yelp_client import search_businesses, get_business_details
+from leads.yelp_client import search_businesses, get_business_details, scrape_website_emails
 from outreach.email_generator import generate_email, personalize_subject
 from outreach.mailchimp_client import plain_text_to_html
 from outreach.smtp_client import send_email
@@ -253,7 +253,24 @@ def cmd_find(term: str, location: str, limit: str = "20"):
         print("No businesses found. Try a different term or location.")
         return
 
-    print(f"Found {len(businesses)} businesses. Saving leads...\n")
+    print(f"Found {len(businesses)} businesses. Scraping websites for emails...\n")
+
+    # Collect all websites for batch scraping
+    websites = []
+    for biz in businesses:
+        site = biz.get("site", "") or ""
+        if site and "yelp.com" not in site:
+            websites.append(site)
+
+    # Batch scrape websites for emails
+    website_emails = {}
+    if websites:
+        try:
+            print(f"  Scanning {len(websites)} websites for contact emails...")
+            website_emails = scrape_website_emails(websites)
+            print(f"  Found emails on {len(website_emails)} sites.\n")
+        except Exception as e:
+            print(f"  Website scrape error: {e}\n")
 
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -288,27 +305,8 @@ def cmd_find(term: str, location: str, limit: str = "20"):
         first = parts[0] if parts else ""
         last = parts[1] if len(parts) > 1 else ""
 
-        email = direct_email
-
-        # If no direct email, try Hunter
-        if not email and website and HUNTER_API_KEY:
-            try:
-                parsed = urlparse(website if "://" in website else "https://" + website)
-                domain = parsed.netloc.replace("www.", "") or parsed.path.replace("www.", "")
-                if domain:
-                    results = domain_search(domain, limit=3)
-                    if results:
-                        best = next((e for e in results if any(
-                            t in (e.get("position") or "").lower()
-                            for t in ["owner", "founder", "manager"]
-                        )), results[0])
-                        email = best.get("value", "")
-                        if not first:
-                            first = best.get("first_name", "")
-                            last = best.get("last_name", "")
-                time.sleep(0.5)
-            except Exception:
-                pass
+        # Use direct email, fall back to website-scraped email
+        email = direct_email or website_emails.get(website, "")
 
         c.execute("""
             INSERT OR IGNORE INTO leads

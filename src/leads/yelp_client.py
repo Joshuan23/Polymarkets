@@ -28,6 +28,25 @@ def search_businesses(term: str, location: str, limit: int = 20) -> list[dict]:
     return results
 
 
+def scrape_website_emails(websites: list[str]) -> dict:
+    """Scrape emails from business websites using Outscraper."""
+    headers = {"X-API-KEY": OUTSCRAPER_API_KEY}
+    params = {"query": ",".join(websites), "async": False}
+    resp = requests.get(
+        f"{OUTSCRAPER_BASE}/emails-and-contacts",
+        headers=headers,
+        params=params,
+    )
+    resp.raise_for_status()
+    results = {}
+    for item in resp.json().get("data", []):
+        url = item.get("query", "")
+        emails = item.get("emails", [])
+        if emails:
+            results[url] = emails[0]
+    return results
+
+
 def get_business_details(business_id: str) -> dict:
     """Not needed for Outscraper — details come in the search response."""
     return {}
