@@ -1,26 +1,33 @@
+import time
 import requests
-from config import YELP_API_KEY
+from config import OUTSCRAPER_API_KEY
 
-YELP_BASE = "https://api.yelp.com/v3"
+OUTSCRAPER_BASE = "https://api.app.outscraper.com"
 
 
 def search_businesses(term: str, location: str, limit: int = 20) -> list[dict]:
-    """Search Yelp for local businesses by type and location."""
-    headers = {"Authorization": f"Bearer {YELP_API_KEY}"}
+    """Search Google Maps via Outscraper for local businesses."""
+    headers = {"X-API-KEY": OUTSCRAPER_API_KEY}
     params = {
-        "term": term,
-        "location": location,
-        "limit": min(limit, 50),
-        "sort_by": "review_count",
+        "query": f"{term} in {location}",
+        "limit": limit,
+        "async": False,
+        "fields": "name,phone,site,full_address,email,owner_name",
     }
-    resp = requests.get(f"{YELP_BASE}/businesses/search", headers=headers, params=params)
+    resp = requests.get(f"{OUTSCRAPER_BASE}/maps/search-v3", headers=headers, params=params)
     resp.raise_for_status()
-    return resp.json().get("businesses", [])
+    data = resp.json()
+
+    # Outscraper returns nested list
+    results = []
+    for group in data.get("data", []):
+        if isinstance(group, list):
+            results.extend(group)
+        elif isinstance(group, dict):
+            results.append(group)
+    return results
 
 
 def get_business_details(business_id: str) -> dict:
-    """Get full details for a business including website URL."""
-    headers = {"Authorization": f"Bearer {YELP_API_KEY}"}
-    resp = requests.get(f"{YELP_BASE}/businesses/{business_id}", headers=headers)
-    resp.raise_for_status()
-    return resp.json()
+    """Not needed for Outscraper — details come in the search response."""
+    return {}

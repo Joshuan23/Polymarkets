@@ -229,31 +229,31 @@ def cmd_leads():
 
 
 def cmd_find(term: str, location: str, limit: str = "20"):
-    """Auto-find local businesses via Yelp and look up emails via Hunter.io."""
+    """Auto-find local businesses via Outscraper (Google Maps) + Hunter.io emails."""
     import uuid
     import sqlite3
     import time
     from urllib.parse import urlparse
-    from config import YELP_API_KEY, HUNTER_API_KEY, DB_PATH
+    from config import OUTSCRAPER_API_KEY, HUNTER_API_KEY, DB_PATH
 
-    if not YELP_API_KEY:
-        print("Add your YELP_API_KEY to Replit Secrets first.")
-        print("Sign up free at yelp.com/developers → Create App → copy API Key")
+    if not OUTSCRAPER_API_KEY:
+        print("Add your OUTSCRAPER_API_KEY to Replit Secrets first.")
+        print("Sign up free at outscraper.com → Profile → API Key")
         return
 
-    print(f"\nSearching Yelp for '{term}' in {location}...\n")
+    print(f"\nSearching Google Maps for '{term}' in {location}...\n")
 
     try:
         businesses = search_businesses(term, location, int(limit))
     except Exception as e:
-        print(f"Yelp search failed: {e}")
+        print(f"Search failed: {e}")
         return
 
     if not businesses:
         print("No businesses found. Try a different term or location.")
         return
 
-    print(f"Found {len(businesses)} businesses. Getting details and emails...\n")
+    print(f"Found {len(businesses)} businesses. Saving leads...\n")
 
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -279,50 +279,37 @@ def cmd_find(term: str, location: str, limit: str = "20"):
     for biz in businesses:
         name = biz.get("name", "")
         phone = biz.get("phone", "")
-        biz_id = biz.get("id", "")
+        website = biz.get("site", "") or ""
+        direct_email = biz.get("email", "") or ""
+        owner = biz.get("owner_name", "") or ""
 
-        # Get website from details
-        website = ""
-        try:
-            details = get_business_details(biz_id)
-            website = details.get("url", "") or details.get("website", "")
-            time.sleep(0.3)
-        except Exception:
-            pass
+        # Parse owner name
+        parts = owner.strip().split(" ", 1)
+        first = parts[0] if parts else ""
+        last = parts[1] if len(parts) > 1 else ""
 
-        # Extract domain
-        domain = ""
-        if website:
-            parsed = urlparse(website if "://" in website else "https://" + website)
-            domain = parsed.netloc.replace("www.", "") or parsed.path.replace("www.", "")
-            # Strip Yelp's own domain
-            if "yelp.com" in domain:
-                domain = ""
+        email = direct_email
 
-        # Try Hunter for email
-        email = ""
-        first = ""
-        last = ""
-        if domain and HUNTER_API_KEY:
+        # If no direct email, try Hunter
+        if not email and website and HUNTER_API_KEY:
             try:
-                emails = domain_search(domain, limit=5)
-                if emails:
-                    best = None
-                    for e in emails:
-                        pos = (e.get("position") or "").lower()
-                        if any(t in pos for t in ["owner", "founder", "manager", "president"]):
-                            best = e
-                            break
-                    if not best:
-                        best = emails[0]
-                    email = best.get("value", "")
-                    first = best.get("first_name", "")
-                    last = best.get("last_name", "")
+                parsed = urlparse(website if "://" in website else "https://" + website)
+                domain = parsed.netloc.replace("www.", "") or parsed.path.replace("www.", "")
+                if domain:
+                    results = domain_search(domain, limit=3)
+                    if results:
+                        best = next((e for e in results if any(
+                            t in (e.get("position") or "").lower()
+                            for t in ["owner", "founder", "manager"]
+                        )), results[0])
+                        email = best.get("value", "")
+                        if not first:
+                            first = best.get("first_name", "")
+                            last = best.get("last_name", "")
                 time.sleep(0.5)
             except Exception:
                 pass
 
-        # Save to DB
         c.execute("""
             INSERT OR IGNORE INTO leads
               (id, first_name, last_name, email, title, company)
@@ -335,13 +322,13 @@ def cmd_find(term: str, location: str, limit: str = "20"):
                 print(f"  FOUND  {name:<35} {email}")
             else:
                 no_email += 1
-                print(f"  SAVED  {name:<35} (no email found — {phone or 'no phone'})")
+                print(f"  SAVED  {name:<35} (no email — {phone or 'no phone'})")
 
     conn.commit()
     conn.close()
 
     print(f"\nDone: {saved} with emails, {no_email} saved without email.")
-    print(f"Run `python main.py send local_service` to send to leads with emails.\n")
+    print(f"Run `python main.py send local_service` when ready.\n")
     print_dashboard()
 
 
