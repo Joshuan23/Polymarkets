@@ -158,28 +158,35 @@ def cmd_import(csv_file: str):
         print(f"File not found: {csv_file}")
 
 
-def cmd_send(niche: str):
+def cmd_send(niche: str, daily_limit: str = "100"):
     profile = PROFILES.get(niche)
     if not profile:
         print(f"Unknown niche '{niche}'.")
         return
 
-    leads = list_leads(limit=200)
+    limit = int(daily_limit)
+    leads = list_leads(limit=2000)
     unsent = [l for l in leads if not l["email_sent"] and l.get("email")]
 
     if not unsent:
-        print("No unsent leads with emails. Run `python main.py import <file.csv>` or `python main.py scrape` first.")
+        print("No unsent leads with emails. Run `python main.py import <file.csv>` first.")
         return
 
-    print(f"\nPreparing to send to {len(unsent)} leads in niche: {niche}\n")
-    confirm = input(f"Send emails to {len(unsent)} leads? [y/N] ")
+    batch = unsent[:limit]
+    remaining = len(unsent) - len(batch)
+
+    print(f"\nQueued: {len(unsent)} leads — sending {len(batch)} today (daily limit: {limit})")
+    if remaining:
+        print(f"Remaining {remaining} will send on future runs.")
+    print()
+    confirm = input(f"Send emails to {len(batch)} leads? [y/N] ")
     if confirm.lower() != "y":
         print("Cancelled.")
         return
 
     sent = 0
     errors = 0
-    for lead in unsent:
+    for lead in batch:
         try:
             email_data = generate_email(lead, profile, "initial")
             subject = personalize_subject(email_data["subject"], lead["first_name"])
