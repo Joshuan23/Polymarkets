@@ -72,4 +72,6 @@ def verify_batch(limit: int = 200):
     print(f"Now run: python main.py send local_service 100")
 
 if __name__ == "__main__":
-    verify_batch(200)
+    import sys
+    limit = int(sys.argv[1]) if len(sys.argv) > 1 else 9999
+    verify_batch(limit)
