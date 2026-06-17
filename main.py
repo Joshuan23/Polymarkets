@@ -307,6 +307,7 @@ def cmd_find(term: str, location: str, limit: str = "20"):
             id TEXT PRIMARY KEY,
             first_name TEXT, last_name TEXT, email TEXT,
             title TEXT, company TEXT, linkedin_url TEXT,
+            phone TEXT,
             status TEXT DEFAULT 'new',
             email_sent INTEGER DEFAULT 0,
             reply_received INTEGER DEFAULT 0,
@@ -317,6 +318,11 @@ def cmd_find(term: str, location: str, limit: str = "20"):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    # Add phone column if it doesn't exist yet (existing databases)
+    try:
+        c.execute("ALTER TABLE leads ADD COLUMN phone TEXT")
+    except Exception:
+        pass
 
     saved = 0
     no_email = 0
@@ -338,9 +344,9 @@ def cmd_find(term: str, location: str, limit: str = "20"):
 
         c.execute("""
             INSERT OR IGNORE INTO leads
-              (id, first_name, last_name, email, title, company)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (str(uuid.uuid4()), first, last, email or None, "Owner", name))
+              (id, first_name, last_name, email, title, company, phone)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (str(uuid.uuid4()), first, last, email or None, "Owner", name, phone or None))
 
         if c.rowcount:
             if email:
@@ -522,6 +528,37 @@ def cmd_enrich_csv(csv_file: str):
     print_dashboard()
 
 
+def cmd_phones(limit: str = "50"):
+    """List businesses with phone numbers for cold calling."""
+    import sqlite3
+    from config import DB_PATH
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute("""
+            SELECT company, phone, first_name, last_name, email
+            FROM leads
+            WHERE phone IS NOT NULL AND phone != ''
+            ORDER BY created_at DESC
+            LIMIT ?
+        """, (int(limit),))
+        rows = c.fetchall()
+    except Exception:
+        rows = []
+    conn.close()
+
+    if not rows:
+        print("\nNo phone numbers found. Run `python main.py find <term> <location>` to scrape businesses with phones.\n")
+        return
+
+    print(f"\n{'Company':<35} {'Phone':<18} {'Owner':<22} {'Email'}")
+    print("-" * 100)
+    for company, phone, first, last, email in rows:
+        owner = f"{first or ''} {last or ''}".strip() or "—"
+        print(f"{(company or ''):<35} {(phone or ''):<18} {owner:<22} {email or '—'}")
+    print(f"\nTotal: {len(rows)} businesses with phone numbers\n")
+
+
 def cmd_niches():
     print("\nAvailable niches:\n")
     for key, profile in PROFILES.items():
@@ -542,6 +579,7 @@ COMMANDS = {
     "hunter": (cmd_hunter, ["domain", "first_name?", "last_name?"]),
     "credits": (cmd_credits, []),
     "enrich-csv": (cmd_enrich_csv, ["csv_file"]),
+    "phones": (cmd_phones, ["limit?"]),
 }
 
 
