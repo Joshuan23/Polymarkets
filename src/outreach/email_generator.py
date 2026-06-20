@@ -2,30 +2,36 @@ from config import YOUR_NAME, CALENDLY_LINK, YOUR_PRICE
 
 SEQUENCE = ["initial", "followup_1", "followup_2", "breakup"]
 
-# Proven cold email templates — no AI API needed, zero cost.
-# These are written to convert: short, specific, direct, one CTA.
+# Rotating subject lines — autopilot picks one per lead to avoid pattern detection
+SUBJECTS = [
+    "{company} — quick question",
+    "missed calls at {company}?",
+    "question for {company}",
+    "saw {company} on Google Maps",
+]
+
 TEMPLATES = {
     "initial": {
-        "subject": "quick question about {company}",
+        "subject": "{company} — quick question",
         "body": (
             "Hi {first},\n\n"
-            "Quick question — when someone calls {company} and nobody picks up, what happens?\n\n"
-            "I help {niche_type} owners set up a system that texts missed callers back within 60 seconds, "
-            "books the job automatically, and follows up for a Google review after. "
-            "Most owners recover 3–5 jobs in the first week.\n\n"
-            "Worth a 15-minute call to see if it makes sense for you? "
-            "You can grab a time here: {calendly}\n\n"
+            "When someone calls {company} and nobody picks up — do they get a text back?\n\n"
+            "I set up a system that automatically texts missed callers within 60 seconds, "
+            "books the job, and follows up for a Google review. "
+            "Most owners recover 3–5 jobs they were already losing every week.\n\n"
+            "Would it even be worth a quick chat?\n\n"
             "{name}"
         ),
     },
     "followup_1": {
-        "subject": "Re: quick question about {company}",
+        "subject": "Re: {company} — quick question",
         "body": (
             "Hi {first},\n\n"
-            "Just bumping this up — I know things get busy.\n\n"
-            "One owner I worked with last month was losing roughly $2k/week to missed calls going to voicemail. "
-            "Two weeks after setup, that stopped. Same phones, same team — just an automatic text-back handling it.\n\n"
-            "Is this something {company} deals with at all? Even a yes or no helps. {calendly}\n\n"
+            "Wanted to follow up — I know things get busy.\n\n"
+            "Quick version: missed calls are the #1 silent revenue killer for local service businesses. "
+            "When someone calls and gets voicemail, 80% of them call a competitor instead.\n\n"
+            "I fix that with an automatic text-back. Takes 48 hours to set up.\n\n"
+            "Does {company} deal with missed calls at all?\n\n"
             "{name}"
         ),
     },
@@ -33,58 +39,57 @@ TEMPLATES = {
         "subject": "free audit for {company}",
         "body": (
             "Hi {first},\n\n"
-            "I'll make this easy — I can do a free 10-minute audit of {company}'s current lead capture "
-            "and tell you exactly how many calls are slipping through. No pitch, just the number.\n\n"
-            "If the number is zero, great — nothing to fix. If it's not, you'll know what it's costing you. "
-            "Book here if you want it: {calendly}\n\n"
+            "Last follow-up — I promise.\n\n"
+            "I'll do a free 10-minute audit and tell you exactly how many calls "
+            "{company} is losing per week and what that's costing you. "
+            "No pitch. Just the number.\n\n"
+            "Interested? Reply 'yes' and I'll send you the details.\n\n"
             "{name}"
         ),
     },
     "breakup": {
-        "subject": "Closing the loop",
+        "subject": "closing the loop — {company}",
         "body": (
             "Hi {first},\n\n"
-            "I won't keep following up — I'll assume the timing isn't right.\n\n"
-            "If that changes and you ever want to look at what's falling through the cracks at {company}, "
-            "my link is always open: {calendly}\n\n"
+            "I won't keep following up.\n\n"
+            "If you ever want to know what missed calls are costing {company}, "
+            "I'm one message away.\n\n"
             "{name}"
         ),
     },
 }
 
-# Niche-specific override for the initial email body when available.
 NICHE_OVERRIDES = {
     "real_estate": {
         "initial": {
-            "subject": "quick question about {company}",
+            "subject": "{company} — quick question",
             "body": (
                 "Hi {first},\n\n"
-                "Do you have a system that follows up with leads who never booked a showing — "
-                "automatically, without you having to remember?\n\n"
-                "I set up automated follow-up sequences for agents that keep cold leads warm and "
-                "re-engage them when they're ready. Takes about a week to set up and runs on its own.\n\n"
-                "Would it make sense to talk? {calendly}\n\n"
+                "Do you have anything that automatically follows up with leads "
+                "who never booked a showing?\n\n"
+                "I set up automated follow-up for agents that re-engages cold leads "
+                "and books showings on autopilot. Runs itself after setup.\n\n"
+                "Worth a quick chat?\n\n"
                 "{name}"
             ),
         }
     },
     "law_firm": {
         "initial": {
-            "subject": "question about {company}'s intake process",
+            "subject": "question about {company}'s intake",
             "body": (
                 "Hi {first},\n\n"
-                "How much time does your team spend on intake calls, conflict checks, and chasing "
-                "documents that clients haven't sent yet?\n\n"
-                "I automate that entire process for small firms — intake forms, document reminders, "
-                "e-signatures, and case summaries all handled before the first real meeting. "
-                "Most firms cut 6–8 hours of admin per week.\n\n"
-                "15 minutes to show you how it works? {calendly}\n\n"
+                "How much time does your team spend on intake calls and chasing documents?\n\n"
+                "I automate that for small firms — intake forms, reminders, e-signatures, "
+                "all handled before the first real meeting. Most firms save 6–8 hours a week.\n\n"
+                "Would that be useful for {company}?\n\n"
                 "{name}"
             ),
         }
     },
 }
 
+import random
 
 def generate_email(lead: dict, niche_profile: dict, touch: str = "initial") -> dict:
     """Return a personalized email from a template — no API, no cost."""
@@ -96,7 +101,13 @@ def generate_email(lead: dict, niche_profile: dict, touch: str = "initial") -> d
     override = NICHE_OVERRIDES.get(niche_key, {}).get(touch)
     template = override if override else TEMPLATES.get(touch, TEMPLATES["initial"])
 
-    subject = template["subject"].format(
+    # Rotate subject lines on initial touch for variety
+    if touch == "initial" and not override:
+        subject_template = random.choice(SUBJECTS)
+    else:
+        subject_template = template["subject"]
+
+    subject = subject_template.format(
         first=first, company=company, name=YOUR_NAME,
         calendly=CALENDLY_LINK, price=YOUR_PRICE, niche_type=niche_type,
     )
