@@ -12,7 +12,7 @@ import smtplib
 import dns.resolver
 from datetime import datetime
 from config import (
-    DB_PATH, OUTSCRAPER_API_KEY, YOUR_EMAIL, YOUR_NAME,
+    DB_PATH, YOUR_EMAIL, YOUR_NAME,
     CALENDLY_LINK, GMAIL_APP_PASSWORD
 )
 
@@ -63,57 +63,38 @@ def ensure_db():
 # ── Lead Finding ──────────────────────────────────────────────────────────────
 
 def find_leads():
-    if not OUTSCRAPER_API_KEY:
-        print("  [SKIP] No OUTSCRAPER_API_KEY — skipping lead scrape")
-        return 0
-
-    import requests
-    from src.leads.yelp_client import search_businesses, scrape_website_emails
+    from src.leads.yellowpages_client import search_yellowpages
 
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     total_saved = 0
 
     for term, location in SEARCH_TARGETS:
-        print(f"  Searching: {term} in {location}...")
+        print(f"  Searching Yellow Pages: {term} in {location}...")
         try:
-            businesses = search_businesses(term, location, RESULTS_PER_SEARCH)
+            businesses = search_yellowpages(term, location, RESULTS_PER_SEARCH)
         except Exception as e:
             print(f"  Error searching {term}: {e}")
             continue
 
-        # Batch scrape websites for emails
-        websites = [b.get("site", "") for b in businesses if b.get("site") and "yelp.com" not in b.get("site", "")]
-        website_emails = {}
-        if websites:
-            try:
-                from src.leads.yelp_client import scrape_website_emails
-                website_emails = scrape_website_emails(websites[:10])  # limit to save credits
-            except Exception:
-                pass
-
         for biz in businesses:
             name = biz.get("name", "")
             phone = biz.get("phone", "")
-            website = biz.get("site", "") or ""
-            email = biz.get("email", "") or website_emails.get(website, "")
-            owner = biz.get("owner_name", "") or ""
-            parts = owner.strip().split(" ", 1)
-            first = parts[0] if parts else ""
-            last = parts[1] if len(parts) > 1 else ""
+            email = biz.get("email", "")
+            website = biz.get("website", "")
 
             try:
                 c.execute("""
                     INSERT OR IGNORE INTO leads
                       (id, first_name, last_name, email, title, company, phone)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (str(uuid.uuid4()), first, last, email or None, "Owner", name, phone or None))
+                """, (str(uuid.uuid4()), "", "", email or None, "Owner", name, phone or None))
                 if c.rowcount:
                     total_saved += 1
             except Exception:
                 pass
 
-        time.sleep(1)
+        time.sleep(2)
 
     conn.commit()
     conn.close()
