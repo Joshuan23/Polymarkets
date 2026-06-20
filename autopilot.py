@@ -22,11 +22,11 @@ DAILY_EMAIL_LIMIT = 40  # emails to send per run (keep low for Gmail safety)
 
 # Search targets — edit these for your city and niches
 SEARCH_TARGETS = [
-    ("plumber", "Houston TX"),
-    ("hvac", "Houston TX"),
-    ("electrician", "Houston TX"),
-    ("roofer", "Houston TX"),
-    ("auto repair", "Houston TX"),
+    ("plumber", "Tampa FL"),
+    ("hvac", "Tampa FL"),
+    ("electrician", "Tampa FL"),
+    ("roofer", "Tampa FL"),
+    ("auto repair", "Tampa FL"),
 ]
 
 RESULTS_PER_SEARCH = 25  # Outscraper results per search (free = 100/month total)
