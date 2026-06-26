@@ -62,39 +62,58 @@ def ensure_db():
 
 # ── Lead Finding ──────────────────────────────────────────────────────────────
 
+def _save_lead(c, name, phone, email):
+    """Insert a lead if new. Returns 1 if saved, 0 if duplicate/skip."""
+    if not name:
+        return 0
+    try:
+        c.execute("""
+            INSERT OR IGNORE INTO leads
+              (id, first_name, last_name, email, title, company, phone)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (str(uuid.uuid4()), "", "", email or None, "Owner", name, phone or None))
+        return 1 if c.rowcount else 0
+    except Exception:
+        return 0
+
+
 def find_leads():
-    from src.leads.yellowpages_client import search_yellowpages
+    """Find leads — Firecrawl (gets emails) if key is set, else Yellow Pages (phones only)."""
+    from config import FIRECRAWL_API_KEY
 
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     total_saved = 0
+    with_email = 0
 
-    for term, location in SEARCH_TARGETS:
-        print(f"  Searching Yellow Pages: {term} in {location}...")
-        try:
-            businesses = search_yellowpages(term, location, RESULTS_PER_SEARCH)
-        except Exception as e:
-            print(f"  Error searching {term}: {e}")
-            continue
-
-        for biz in businesses:
-            name = biz.get("name", "")
-            phone = biz.get("phone", "")
-            email = biz.get("email", "")
-            website = biz.get("website", "")
-
+    if FIRECRAWL_API_KEY:
+        from src.leads.firecrawl_client import search_businesses as fc_search
+        for term, location in SEARCH_TARGETS:
+            print(f"  Firecrawl: {term} in {location}...")
             try:
-                c.execute("""
-                    INSERT OR IGNORE INTO leads
-                      (id, first_name, last_name, email, title, company, phone)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (str(uuid.uuid4()), "", "", email or None, "Owner", name, phone or None))
-                if c.rowcount:
-                    total_saved += 1
-            except Exception:
-                pass
-
-        time.sleep(2)
+                businesses = fc_search(term, location, limit=RESULTS_PER_SEARCH)
+            except Exception as e:
+                print(f"  Error searching {term}: {e}")
+                continue
+            for biz in businesses:
+                saved = _save_lead(c, biz.get("name", ""), biz.get("phone", ""), biz.get("email", ""))
+                total_saved += saved
+                if saved and biz.get("email"):
+                    with_email += 1
+            time.sleep(1)
+        print(f"  ({with_email} of {total_saved} new leads have emails)")
+    else:
+        from src.leads.yellowpages_client import search_yellowpages
+        for term, location in SEARCH_TARGETS:
+            print(f"  Yellow Pages: {term} in {location}...")
+            try:
+                businesses = search_yellowpages(term, location, RESULTS_PER_SEARCH)
+            except Exception as e:
+                print(f"  Error searching {term}: {e}")
+                continue
+            for biz in businesses:
+                total_saved += _save_lead(c, biz.get("name", ""), biz.get("phone", ""), biz.get("email", ""))
+            time.sleep(2)
 
     conn.commit()
     conn.close()

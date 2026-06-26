@@ -559,6 +559,70 @@ def cmd_phones(limit: str = "50"):
     print(f"\nTotal: {len(rows)} businesses with phone numbers\n")
 
 
+def cmd_firecrawl(term: str, location: str, limit: str = "10"):
+    """Find businesses with emails via Firecrawl and save them."""
+    import uuid
+    import sqlite3
+    from config import FIRECRAWL_API_KEY, DB_PATH
+    from leads.firecrawl_client import search_businesses
+
+    if not FIRECRAWL_API_KEY:
+        print("Add your FIRECRAWL_API_KEY to Replit Secrets first.")
+        print("Sign up free at firecrawl.dev → Dashboard → API Keys")
+        return
+
+    print(f"\nFirecrawl searching '{term}' in {location}...\n")
+    try:
+        businesses = search_businesses(term, location, int(limit))
+    except Exception as e:
+        print(f"Search failed: {e}")
+        return
+
+    if not businesses:
+        print("No businesses found. Try a broader term or location.")
+        return
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS leads (
+            id TEXT PRIMARY KEY,
+            first_name TEXT, last_name TEXT, email TEXT,
+            title TEXT, company TEXT, linkedin_url TEXT, phone TEXT,
+            status TEXT DEFAULT 'new', email_sent INTEGER DEFAULT 0,
+            reply_received INTEGER DEFAULT 0, call_booked INTEGER DEFAULT 0,
+            deal_closed INTEGER DEFAULT 0, deal_value REAL DEFAULT 0,
+            notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    try:
+        c.execute("ALTER TABLE leads ADD COLUMN phone TEXT")
+    except Exception:
+        pass
+
+    saved = with_email = 0
+    for biz in businesses:
+        name = biz.get("name", "")
+        email = biz.get("email", "")
+        phone = biz.get("phone", "")
+        if not name:
+            continue
+        c.execute("""
+            INSERT OR IGNORE INTO leads (id, first_name, last_name, email, title, company, phone)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (str(uuid.uuid4()), "", "", email or None, "Owner", name, phone or None))
+        if c.rowcount:
+            saved += 1
+            if email:
+                with_email += 1
+            print(f"  {'FOUND' if email else 'SAVED'}  {name:<35} {email or phone or '(no contact)'}")
+
+    conn.commit()
+    conn.close()
+    print(f"\nDone: {saved} new leads, {with_email} with emails.")
+    print_dashboard()
+
+
 def cmd_niches():
     print("\nAvailable niches:\n")
     for key, profile in PROFILES.items():
@@ -580,6 +644,7 @@ COMMANDS = {
     "credits": (cmd_credits, []),
     "enrich-csv": (cmd_enrich_csv, ["csv_file"]),
     "phones": (cmd_phones, ["limit?"]),
+    "firecrawl": (cmd_firecrawl, ["term", "location", "limit?"]),
 }
 
 
