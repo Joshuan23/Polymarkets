@@ -20,16 +20,33 @@ from config import (
 
 DAILY_EMAIL_LIMIT = 40  # emails to send per run (keep low for Gmail safety)
 
-# Search targets — edit these for your city and niches
-SEARCH_TARGETS = [
-    ("plumber", "Tampa FL"),
-    ("hvac", "Tampa FL"),
-    ("electrician", "Tampa FL"),
-    ("roofer", "Tampa FL"),
-    ("auto repair", "Tampa FL"),
+# Niches + cities are combined automatically into search targets below.
+# Add/remove cities or niches to widen or narrow the net.
+CITIES = [
+    "Tampa FL",
+    "St Petersburg FL",
+    "Clearwater FL",
+    "Brandon FL",
 ]
 
-RESULTS_PER_SEARCH = 25  # Outscraper results per search (free = 100/month total)
+NICHES = [
+    "plumber",
+    "hvac",
+    "electrician",
+    "roofer",
+    "auto repair shop",
+    "landscaping company",
+    "pest control",
+    "garage door repair",
+]
+
+# Every niche is searched in every city → len(NICHES) x len(CITIES) searches.
+SEARCH_TARGETS = [(niche, city) for city in CITIES for niche in NICHES]
+
+RESULTS_PER_SEARCH = 8        # results pulled per search (1 Firecrawl credit each)
+MAX_SEARCHES_PER_RUN = 10     # cap searches/run so Firecrawl credits last the month
+# 10 searches x 8 results ≈ 80 credits/run → ~12 runs on the free 1,000 credits.
+# The run rotates through SEARCH_TARGETS by day so all niches/cities get covered.
 
 # ── Database ──────────────────────────────────────────────────────────────────
 
@@ -77,6 +94,16 @@ def _save_lead(c, name, phone, email):
         return 0
 
 
+def _todays_targets():
+    """Rotate through SEARCH_TARGETS by day so each run covers a fresh slice."""
+    if len(SEARCH_TARGETS) <= MAX_SEARCHES_PER_RUN:
+        return SEARCH_TARGETS
+    day = datetime.now().timetuple().tm_yday
+    start = (day * MAX_SEARCHES_PER_RUN) % len(SEARCH_TARGETS)
+    rotated = SEARCH_TARGETS[start:] + SEARCH_TARGETS[:start]
+    return rotated[:MAX_SEARCHES_PER_RUN]
+
+
 def find_leads():
     """Find leads — Firecrawl (gets emails) if key is set, else Yellow Pages (phones only)."""
     from config import FIRECRAWL_API_KEY
@@ -85,10 +112,11 @@ def find_leads():
     c = conn.cursor()
     total_saved = 0
     with_email = 0
+    targets = _todays_targets()
 
     if FIRECRAWL_API_KEY:
         from src.leads.firecrawl_client import search_businesses as fc_search
-        for term, location in SEARCH_TARGETS:
+        for term, location in targets:
             print(f"  Firecrawl: {term} in {location}...")
             try:
                 businesses = fc_search(term, location, limit=RESULTS_PER_SEARCH)
@@ -104,7 +132,7 @@ def find_leads():
         print(f"  ({with_email} of {total_saved} new leads have emails)")
     else:
         from src.leads.yellowpages_client import search_yellowpages
-        for term, location in SEARCH_TARGETS:
+        for term, location in targets:
             print(f"  Yellow Pages: {term} in {location}...")
             try:
                 businesses = search_yellowpages(term, location, RESULTS_PER_SEARCH)
