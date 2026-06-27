@@ -27,6 +27,10 @@ CITIES = [
     "St Petersburg FL",
     "Clearwater FL",
     "Brandon FL",
+    "Lakeland FL",
+    "Sarasota FL",
+    "Wesley Chapel FL",
+    "Riverview FL",
 ]
 
 NICHES = [
