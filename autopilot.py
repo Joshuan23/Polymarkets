@@ -18,7 +18,7 @@ from config import (
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 
-DAILY_EMAIL_LIMIT = 40  # emails to send per run (keep low for Gmail safety)
+DAILY_EMAIL_LIMIT = 60  # emails to send per run (keep moderate for Gmail safety)
 
 # Niches + cities are combined automatically into search targets below.
 # Add/remove cities or niches to widen or narrow the net.
